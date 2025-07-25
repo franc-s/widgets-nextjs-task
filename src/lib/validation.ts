@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { WidgetValidation } from '../types/widget'
+import { WidgetValidation } from '@/types/widget'
 
 // Validation schema
 export const widgetContentSchema = z.string()
