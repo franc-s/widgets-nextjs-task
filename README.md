@@ -1,36 +1,103 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Text Widget Manager
 
-## Getting Started
+A responsive text widget management app with auto-save, real-time validation, and persistent storage.
 
-First, run the development server:
+## Features
+
+- **Multi-Widget Management**: Add/delete unlimited text widgets
+- **Auto-Save**: Debounced saving (500ms) as you type
+- **Real-time Validation**: Character count with visual feedback (5,000 char limit)
+- **Persistent Storage**: localStorage with easy API swap capability
+- **Responsive Design**: Mobile-friendly with full accessibility
+- **Type Safety**: Built with TypeScript
+
+## Tech Stack
+
+- **Next.js 15** with App Router
+- **TypeScript** with strict mode
+- **Tailwind CSS** for styling
+- **React Query** for state management
+- **Zod** for validation
+- **Jest + RTL** for testing
+
+## Quick Start
 
 ```bash
+# Install and run
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# Open http://localhost:3000
+
+# Docker (optional)
+docker build -t text-widget-manager .
+docker run -p 3000:3000 text-widget-manager
+
+# Testing
+npm test
+npm run test:coverage
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Architecture
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Storage Abstraction
+```typescript
+// Current: localStorage
+export const storageService = new LocalStorageService()
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+// Easy API swap:
+// export const storageService = new ApiStorageService()
+```
 
-## Learn More
+### Key Components
+- **TextWidget**: Individual widget with validation and controls
+- **useWidgets**: React Query hook for state management
+- **StorageService**: Abstracted storage interface
 
-To learn more about Next.js, take a look at the following resources:
+## Project Structure
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+src/
+├── app/                 # Next.js App Router
+├── components/          # React components + tests
+├── hooks/              # Custom hooks (useWidgets)
+├── lib/                # Storage, validation, utils
+└── types/              # TypeScript definitions
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Tradeoffs
 
-## Deploy on Vercel
+### Chosen Approaches
+- **localStorage over API**: Simpler for MVP, easy to swap later
+- **React Query over Redux**: Better async handling, simpler setup
+- **Debounced auto-save**: Balance between UX and performance
+- **Character limit (5k)**: Prevents performance issues with large text
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Alternative Considerations
+- **IndexedDB**: More storage but complex API for simple text
+- **Real-time sync**: Overkill for single-user MVP
+- **Rich text editor**: Would complicate validation and storage
+- **Server-side storage**: Adds backend complexity for demo
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## What I'd Do With More Time
+
+- Rich text editing with markdown support
+- Drag & drop widget reordering and templates
+- Export/import functionality and search/filtering
+- Real-time collaboration with WebSockets
+- Offline support with service workers
+- Full backend API with authentication
+- Performance analytics and comprehensive monitoring
+
+## Testing
+
+- **Coverage**: 80% minimum requirement
+- **Types**: Unit, integration, and component tests
+- **Commands**: `npm test`, `npm run test:watch`, `npm run test:coverage`
+
+## Browser Support
+
+Modern browsers (Chrome 90+, Firefox 90+, Safari 14+, Edge 90+) with localStorage support.
+
+---
+
+**Built for the Trumpet Technical Challenge**
