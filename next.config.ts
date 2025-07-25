@@ -1,7 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  output: 'standalone',
+  experimental: {
+    // Optimize for Docker builds
+    optimizePackageImports: ['lucide-react', '@tanstack/react-query']
+  }
 };
 
 export default nextConfig;
