@@ -14,12 +14,30 @@ export const WIDGET_LIMITS = {
 } as const
 
 export function validateWidgetContent(content: string): WidgetValidation {
-  const characterCount = content.length
   const errors: string[] = []
+  
+  // Handle null/undefined gracefully
+  if (content == null) {
+    content = ''
+  }
+  
+  // Ensure content is a string
+  if (typeof content !== 'string') {
+    content = String(content)
+  }
 
-  // Basic validation
+  // Use proper Unicode-aware character counting
+  const characterCount = [...content].length // Handles emojis and unicode properly
+  const byteSize = new TextEncoder().encode(content).length
+
+  // Character limit validation
   if (characterCount > WIDGET_LIMITS.MAX_CHARACTERS) {
     errors.push(`Content exceeds maximum length of ${WIDGET_LIMITS.MAX_CHARACTERS} characters`)
+  }
+
+  // Byte size validation (for storage efficiency)
+  if (byteSize > 50000) { // ~50KB limit for single widget
+    errors.push('Content size is too large for storage')
   }
 
   // Warning for approaching limit
@@ -27,20 +45,44 @@ export function validateWidgetContent(content: string): WidgetValidation {
     errors.push(`Approaching character limit (${characterCount}/${WIDGET_LIMITS.MAX_CHARACTERS})`)
   }
 
-  // Zod validation only if no custom errors
-  if (errors.length === 0 || (errors.length === 1 && errors[0].includes('Approaching'))) {
-    try {
-      widgetContentSchema.parse(content)
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        errors.push(...error.issues.map((issue) => issue.message))
+  // Additional content validation
+  try {
+    // Check for excessive line breaks
+    const lineCount = content.split('\n').length
+    if (lineCount > 1000) {
+      errors.push('Too many line breaks (maximum 1000 lines)')
+    }
+
+    // Check for suspicious patterns that might indicate script injection
+    const suspiciousPatterns = [
+      /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
+      /javascript:/gi,
+      /data:text\/html/gi,
+      /vbscript:/gi
+    ]
+    
+    for (const pattern of suspiciousPatterns) {
+      if (pattern.test(content)) {
+        errors.push('Content contains potentially unsafe elements')
+        break
       }
+    }
+
+    // Zod validation for basic structure
+    if (errors.filter(e => !e.includes('Approaching')).length === 0) {
+      widgetContentSchema.parse(content)
+    }
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      errors.push(...error.issues.map((issue) => issue.message))
+    } else {
+      errors.push('Content validation failed')
     }
   }
 
   return {
     isValid: errors.length === 0 || (errors.length === 1 && errors[0].includes('Approaching')),
-    errors,
+    errors: errors.filter((error, index, self) => self.indexOf(error) === index), // Remove duplicates
     characterCount
   }
 }
