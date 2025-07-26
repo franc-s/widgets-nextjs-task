@@ -232,7 +232,7 @@ describe('WidgetContainer Architecture', () => {
   })
 
   describe('Component Integration', () => {
-    it('demonstrates how separated components work together', () => {
+    it('integrates all widget components correctly', () => {
       render(
         <TestProvider>
           <WidgetContainer

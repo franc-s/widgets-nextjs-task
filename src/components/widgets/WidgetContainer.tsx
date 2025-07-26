@@ -17,8 +17,7 @@ interface WidgetContainerProps {
 }
 
 /**
- * Smart container component that orchestrates widget functionality
- * Demonstrates separation of concerns and component composition
+ * Main widget container component
  */
 export function WidgetContainer({ 
   widget, 
