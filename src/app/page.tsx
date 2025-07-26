@@ -2,7 +2,7 @@
 
 import { Plus, FileText, Loader2 } from 'lucide-react'
 import { useWidgets } from '@/hooks/useWidgets'
-import { TextWidget } from '@/components/TextWidget'
+import { WidgetContainer } from '@/components/widgets/WidgetContainer'
 import { Button } from '@/components/ui/Button'
 
 export default function Home() {
@@ -85,7 +85,7 @@ export default function Home() {
         ) : (
           <div className="space-y-6">
             {widgets.map((widget) => (
-              <TextWidget
+              <WidgetContainer
                 key={widget.id}
                 widget={widget}
                 onUpdate={updateWidget}
