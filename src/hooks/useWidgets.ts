@@ -4,6 +4,8 @@ import { useEffect } from 'react'
 import { TextWidget } from '@/types/widget'
 import { storageService } from '@/lib/storage'
 import { generateId } from '@/lib/utils'
+import { logger } from '@/lib/logger'
+import { analytics, trackBug, measurePerformance } from '@/lib/analytics'
 
 const WIDGETS_QUERY_KEY = ['widgets']
 
@@ -23,14 +25,20 @@ export function useWidgets() {
 
   // Mutation for adding a new widget
   const addWidgetMutation = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       const newWidget: TextWidget = {
         id: generateId(),
         content: '',
         createdAt: new Date(),
         updatedAt: new Date()
       }
-      return storageService.addWidget(newWidget)
+      
+      const result = await measurePerformance('widget_creation', () =>
+        storageService.addWidget(newWidget)
+      )
+      
+      analytics.trackWidgetCreated(newWidget.id)
+      return result
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: WIDGETS_QUERY_KEY })
@@ -65,7 +73,15 @@ export function useWidgets() {
       if (context?.previousWidgets) {
         queryClient.setQueryData(WIDGETS_QUERY_KEY, context.previousWidgets)
       }
-      console.error('Failed to update widget:', error)
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      logger.error('Widget update operation failed', { 
+        error: errorMessage,
+        widgetId: variables.id 
+      })
+      trackBug(error instanceof Error ? error : new Error(errorMessage), { 
+        operation: 'widget_update',
+        widgetId: variables.id 
+      })
     },
     onSettled: () => {
       // Always refetch after error or success
@@ -96,11 +112,21 @@ export function useWidgets() {
       if (context?.previousWidgets) {
         queryClient.setQueryData(WIDGETS_QUERY_KEY, context.previousWidgets)
       }
-      console.error('Failed to delete widget:', error)
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      logger.error('Widget deletion operation failed', { 
+        error: errorMessage,
+        widgetId: variables 
+      })
+      trackBug(error instanceof Error ? error : new Error(errorMessage), { 
+        operation: 'widget_delete',
+        widgetId: variables 
+      })
     },
     onSuccess: (result, id) => {
       if (!result) {
-        console.warn(`Widget ${id} was not found for deletion`)
+        logger.warn('Widget deletion attempted but widget not found', { widgetId: id })
+      } else {
+        analytics.trackWidgetDeleted(id)
       }
     },
     onSettled: () => {
@@ -113,10 +139,17 @@ export function useWidgets() {
     (id: string, content: string) => {
       // Additional validation before mutation
       if (!id || typeof content !== 'string') {
-        console.error('Invalid parameters for widget update:', { id, content })
+        logger.error('Invalid parameters provided for widget update', { 
+          providedId: id, 
+          contentType: typeof content, 
+          hasId: !!id,
+          hasContent: !!content 
+        })
+        analytics.trackValidationFailure(id || 'unknown', ['Invalid update parameters'])
         return
       }
       updateWidgetMutation.mutate({ id, content })
+      analytics.trackWidgetUpdated(id, content.length)
     },
     500 // 500ms debounce
   )

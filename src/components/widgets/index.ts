@@ -1,27 +1,14 @@
 /**
  * Widget Components Module
  * 
- * This module demonstrates clean component architecture with separation of concerns:
- * 
- * Architecture Pattern:
- * - Container/Presentation Pattern: Smart containers manage state, presentation components handle UI
- * - Composition over Inheritance: Components are composed of smaller, focused components
- * - Single Responsibility: Each component has one clear purpose
- * 
  * Component Hierarchy:
- * ├── WidgetContainer (Smart) - Orchestrates widget functionality
- * │   ├── WidgetHeader (Presentation) - Displays metadata and actions
- * │   ├── WidgetContent (Smart) - Manages content editing
- * │   │   ├── WidgetTextArea (Presentation) - Pure textarea component
- * │   │   └── WidgetValidationDisplay (Presentation) - Error messages
- * │   └── WidgetFooter (Presentation) - Character count and status
- * └── useWidgetState (Hook) - Encapsulates business logic
- * 
- * Benefits:
- * - Easy to test (presentation components are pure functions)
- * - Reusable (components can be used in different contexts)
- * - Maintainable (clear separation of concerns)
- * - Scalable (easy to add new features without affecting others)
+ * ├── WidgetContainer - Main widget component
+ * │   ├── WidgetHeader - Displays metadata and actions
+ * │   ├── WidgetContent - Manages content editing
+ * │   │   ├── WidgetTextArea - Text input component
+ * │   │   └── WidgetValidationDisplay - Error messages
+ * │   └── WidgetFooter - Character count and status
+ * └── useWidgetState - Widget state management
  */
 
 // Main container component

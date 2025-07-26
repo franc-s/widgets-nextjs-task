@@ -1,4 +1,6 @@
 import { TextWidget } from '@/types/widget'
+import { logger, logRecoveryAction } from './logger'
+import { analytics } from './analytics'
 
 const STORAGE_KEY = 'text-widgets'
 const STORAGE_BACKUP_KEY = 'text-widgets-backup'
@@ -46,7 +48,7 @@ function checkStorageQuota(dataSize: number): boolean {
       navigator.storage.estimate().then(estimate => {
         const used = estimate.usage || 0
         const quota = estimate.quota || 0
-        console.debug('Storage usage:', { used, quota, available: quota - used })
+        logger.debug('Storage quota checked', { used, quota, available: quota - used })
       })
     }
     
@@ -90,7 +92,7 @@ class LocalStorageService implements StorageService {
         }))
       }
     } catch (error) {
-      console.warn('Failed to create backup:', error)
+      logger.warn('Backup creation failed', { error: error instanceof Error ? error.message : String(error) })
       // Backup failure is not critical, continue operation
     }
   }
@@ -101,12 +103,15 @@ class LocalStorageService implements StorageService {
       if (backup) {
         const parsed = JSON.parse(backup)
         if (parsed.widgets && Array.isArray(parsed.widgets)) {
-          console.info('Recovered widgets from backup:', parsed.timestamp)
+          logRecoveryAction('widgets_recovered_from_backup', { timestamp: parsed.timestamp })
+          analytics.trackStorageRecovery('backup_recovery', true)
           return this.parseStoredWidgets(JSON.stringify(parsed.widgets))
         }
       }
     } catch (error) {
-      console.error('Recovery attempt failed:', error)
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      logger.error('Widget recovery from backup failed', { error: errorMessage })
+      analytics.trackStorageRecovery('backup_recovery', false)
     }
     return []
   }
@@ -133,17 +138,26 @@ class LocalStorageService implements StorageService {
             updatedAt: new Date(widget.updatedAt)
           })
         } else {
-          console.warn('Invalid widget found and skipped:', widget)
+          logger.warn('Invalid widget found and skipped during parsing', { 
+            widgetId: widget?.id || 'unknown',
+            hasContent: !!widget?.content 
+          })
         }
       }
       
       if (validWidgets.length < invalidCount) {
-        console.warn(`Recovered ${validWidgets.length}/${invalidCount} widgets`)
+        logger.warn('Partial widget recovery completed', { 
+          validCount: validWidgets.length, 
+          totalCount: invalidCount,
+          skippedCount: invalidCount - validWidgets.length 
+        })
       }
       
       return validWidgets
     } catch (error) {
-      console.error('Failed to parse stored widgets:', error)
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      logger.error('Widget parsing failed, attempting recovery', { error: errorMessage })
+      analytics.trackStorageError('widget_parsing', errorMessage)
       
       // Attempt recovery from backup
       const recovered = this.attemptRecovery()
@@ -175,7 +189,9 @@ class LocalStorageService implements StorageService {
             reject(error)
           } else {
             // Return empty array for recoverable errors
-            console.warn('Failed to load widgets, returning empty array:', error)
+            const errorMessage = error instanceof Error ? error.message : String(error)
+            logger.warn('Widget loading failed, returning empty array', { error: errorMessage })
+            analytics.trackStorageError('widget_loading', errorMessage)
             resolve([])
           }
         }
@@ -254,7 +270,7 @@ class LocalStorageService implements StorageService {
       const widgetIndex = widgets.findIndex(w => w.id === id)
       
       if (widgetIndex === -1) {
-        console.warn(`Widget not found for update: ${id}`)
+        logger.warn('Widget not found for update operation', { widgetId: id })
         return null
       }
       
@@ -285,7 +301,7 @@ class LocalStorageService implements StorageService {
       const widgetToDelete = widgets.find(w => w.id === id)
       
       if (!widgetToDelete) {
-        console.warn(`Widget not found for deletion: ${id}`)
+        logger.warn('Widget not found for deletion operation', { widgetId: id })
         return false
       }
 
@@ -296,7 +312,8 @@ class LocalStorageService implements StorageService {
       }
       
       await this.saveWidgets(filteredWidgets)
-      console.info(`Widget deleted: ${id}`)
+      logger.info('Widget successfully deleted', { widgetId: id })
+      analytics.trackWidgetDeleted(id)
       return true
     } catch (error) {
       if (error instanceof StorageError) {

@@ -3,6 +3,8 @@
 import React, { Component, ReactNode, ErrorInfo } from 'react'
 import { AlertTriangle, RefreshCw } from 'lucide-react'
 import { Button } from './ui/Button'
+import { logger } from '@/lib/logger'
+import { trackBug } from '@/lib/analytics'
 
 interface ErrorBoundaryProps {
   children: ReactNode
@@ -39,11 +41,18 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     // Log error details for debugging
-    console.error('Error caught by ErrorBoundary:', {
-      error: error.message,
-      stack: error.stack,
+    logger.error('Error caught by ErrorBoundary', {
+      errorMessage: error.message,
+      errorStack: error.stack,
       componentStack: errorInfo.componentStack,
       errorId: this.state.errorId
+    })
+
+    // Track error for analytics and monitoring
+    trackBug(error, {
+      errorId: this.state.errorId,
+      componentStack: errorInfo.componentStack,
+      context: 'error_boundary'
     })
 
     // Call optional error handler
@@ -138,11 +147,17 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 // Hook version for functional components
 export function useErrorHandler() {
   return (error: Error, errorInfo?: ErrorInfo) => {
-    console.error('Error caught by error handler:', error, errorInfo)
+    logger.error('Error caught by error handler hook', {
+      errorMessage: error.message,
+      errorStack: error.stack,
+      componentStack: errorInfo?.componentStack
+    })
     
-    // In a real app, send to error reporting service
-    if (process.env.NODE_ENV === 'production') {
-      // sendErrorReport(error, errorInfo)
-    }
+    trackBug(error, {
+      context: 'error_handler_hook',
+      componentStack: errorInfo?.componentStack
+    })
+    
+    // Error already sent to monitoring via trackBug
   }
 } 

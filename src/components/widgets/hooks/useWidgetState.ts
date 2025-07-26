@@ -18,8 +18,7 @@ interface UseWidgetStateReturn {
 }
 
 /**
- * Custom hook that encapsulates widget state management
- * Demonstrates separation of business logic from UI components
+ * Widget state management hook
  */
 export function useWidgetState({ 
   widget, 
